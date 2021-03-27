@@ -1,5 +1,7 @@
 package com.kodilla.tictactoe;
 
+import javafx.application.Platform;
+import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.ButtonBar;
 import javafx.scene.control.ButtonType;
@@ -12,7 +14,9 @@ import java.util.stream.Collectors;
 class TicTacToeController {
 
     GridPane grid;
-    Stage primaryStage;
+    int xWinnings = 0;
+    int oWinnings = 0;
+    int draw = 0;
 
     public TicTacToeController(GridPane grid) {
         this.grid = grid;
@@ -53,40 +57,12 @@ class TicTacToeController {
         return result;
     }
 
-    public void runAGame(Tile tile) {
-
-        if (ifFieldWasUsedBefore(tile)) {
-            tile.getText().setText("X");
-            verifyResult();
-            computerMove();
-            verifyResult();
-        }
-    }
-
-    public boolean isDraw() {
-        List<Tile> emptyTiles = findEmptyTiles();
-        return (emptyTiles.size() == 0);
-    }
-
-    public void verifyResult() {
-        if (isWinningCombination("X") || isWinningCombination("O") || isDraw()) {
-            endOfGame();
-        }
-    }
-
-    public boolean isWinningCombination(String mark) {
-
+    public boolean checkRows(String mark) {
         List<Tile> tiles = findTiles(mark);
 
         int row0 = 0;
         int row1 = 0;
         int row2 = 0;
-        int column0 = 0;
-        int column1 = 0;
-        int column2 = 0;
-        int diagonal1 = 0;
-        int diagonal2 = 0;
-
         for (Tile tile : tiles) {
 //            System.out.println(tile.getText());
             if (GridPane.getRowIndex(tile) == 0) {
@@ -97,6 +73,14 @@ class TicTacToeController {
                 row2++;
             }
         }
+        return row0 == 3 || row1 == 3 || row2 == 3;
+    }
+
+    public boolean checkColumns(String mark) {
+        List<Tile> tiles = findTiles(mark);
+        int column0 = 0;
+        int column1 = 0;
+        int column2 = 0;
 
         for (Tile tile : tiles) {
 //            System.out.println(tile.getText());
@@ -108,7 +92,13 @@ class TicTacToeController {
                 column2++;
             }
         }
+        return column0 == 3 || column1 == 3 || column2 == 3;
+    }
 
+    public boolean checkDiagonals(String mark) {
+        List<Tile> tiles = findTiles(mark);
+        int diagonal1 = 0;
+        int diagonal2 = 0;
 
         for (Tile tile : tiles) {
             if (GridPane.getRowIndex(tile) == 0 && GridPane.getColumnIndex(tile) == 0) {
@@ -128,12 +118,60 @@ class TicTacToeController {
                 diagonal2++;
             }
         }
-        return row0 == 3 || row1 == 3 || row2 == 3 || column0 == 3 || column1 == 3 || column2 == 3 || diagonal1 == 3 || diagonal2 == 3;
-
+        return diagonal1 == 3 || diagonal2 == 3;
     }
 
+    public boolean isDraw() {
+        List<Tile> emptyTiles = findEmptyTiles();
+        return (emptyTiles.size() == 0);
+    }
+
+    public boolean isWinningCombination(String mark) {
+        return checkRows(mark) || checkColumns(mark) || checkDiagonals(mark);
+    }
+
+    public void verifyResult() {
+        if (isWinningCombination("X") || isWinningCombination("O") || isDraw()) {
+            addResults();
+            endOfGame();
+        }
+    }
+
+    public void runAGame(Tile tile) {
+
+        if (ifFieldWasUsedBefore(tile)) {
+            tile.getText().setText("X");
+            verifyResult();
+            computerMove();
+            verifyResult();
+        }
+    }
+
+    public void addResults() {
+        if (isWinningCombination("X")) {
+            xWinnings++;
+        } else if (isWinningCombination("O")) {
+            oWinnings++;
+        } else if (isDraw()) {
+            draw++;
+        }
+    }
+
+    public int getXWinnings() {
+        return xWinnings;
+    }
+
+    public int getOWinnings() {
+        return oWinnings;
+    }
+
+    public int getDraw() {
+        return draw;
+    }
+
+
     public void endOfGame() {
-        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle("Game over");
         String message = "";
         alert.setHeaderText("Thank you for playing Tic Tac Toe");
@@ -148,13 +186,13 @@ class TicTacToeController {
 
         ButtonType buttonYes = new ButtonType("Yes");
         ButtonType buttonNo = new ButtonType("No");
-//        ButtonType buttonCancel = new ButtonType("Cancel", ButtonBar.ButtonData.CANCEL_CLOSE);
+        ButtonType buttonShowResult = new ButtonType("Show Result");
 
-        alert.getButtonTypes().removeAll(ButtonType.OK);
-        alert.getButtonTypes().addAll(buttonYes,buttonNo);
+        alert.getButtonTypes().removeAll(ButtonType.OK, ButtonType.CANCEL);
+        alert.getButtonTypes().addAll(buttonYes, buttonNo, buttonShowResult);
         Optional<ButtonType> response = alert.showAndWait();
 
-        if (response.get() == buttonYes) {
+        if (response.isPresent() && response.get() == (buttonYes)) {
             List<Tile> allTiles = grid.getChildren().stream()
                     .map(node -> ((Tile) node))
                     .collect(Collectors.toList());
@@ -162,10 +200,16 @@ class TicTacToeController {
             for (Tile tile : allTiles) {
                 tile.getText().setText("");
             }
-//        }else if(response.get() == buttonNo){
 
-        }
+        } else if (response.isPresent() && response.get() == (buttonNo)) {
+            Platform.exit();
 
-        primaryStage.close();
+        } else if (response.isPresent() && response.get() == (buttonShowResult)) {
+            Alert information = new Alert(Alert.AlertType.INFORMATION);
+            information.setTitle("Game result");
+            information.setHeaderText("Winnings X = " + getXWinnings() + "\nWinnings O = " + getOWinnings() + "\nDraw = " + getDraw());
+            Optional<ButtonType> response1 = information.showAndWait();
+            Platform.exit();
         }
+    }
 }
