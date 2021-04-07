@@ -1,24 +1,27 @@
 package com.kodilla.tictactoe;
 
 import javafx.application.Platform;
-import javafx.scene.Scene;
 import javafx.scene.control.Alert;
-import javafx.scene.control.ButtonBar;
 import javafx.scene.control.ButtonType;
 import javafx.scene.layout.GridPane;
-import javafx.stage.Stage;
 
+import java.io.*;
 import java.util.*;
 import java.util.stream.Collectors;
 
-class TicTacToeController {
+public class TicTacToeController implements Serializable {
 
     GridPane grid;
-    int xWinnings = 0;
-    int oWinnings = 0;
-    int draw = 0;
+    File savedList = new File("ranking.list");
+    Map<String, Integer> map = new LinkedHashMap<>();
+    Integer numberOfRound = 0;
 
     public TicTacToeController(GridPane grid) {
+        System.out.println("Creating controller");
+        loadMap();
+        numberOfRound = map.getOrDefault("round", numberOfRound);
+        numberOfRound++;
+        map.put("round", numberOfRound);
         this.grid = grid;
     }
 
@@ -51,7 +54,6 @@ class TicTacToeController {
         }
     }
 
-
     public boolean ifFieldWasUsedBefore(Tile tile) {
         boolean result = tile.getText().getText().equals("");
         return result;
@@ -64,7 +66,6 @@ class TicTacToeController {
         int row1 = 0;
         int row2 = 0;
         for (Tile tile : tiles) {
-//            System.out.println(tile.getText());
             if (GridPane.getRowIndex(tile) == 0) {
                 row0++;
             } else if (GridPane.getRowIndex(tile) == 1) {
@@ -83,7 +84,6 @@ class TicTacToeController {
         int column2 = 0;
 
         for (Tile tile : tiles) {
-//            System.out.println(tile.getText());
             if (GridPane.getColumnIndex(tile) == 0) {
                 column0++;
             } else if (GridPane.getColumnIndex(tile) == 1) {
@@ -130,47 +130,96 @@ class TicTacToeController {
         return checkRows(mark) || checkColumns(mark) || checkDiagonals(mark);
     }
 
-    public void verifyResult() {
+    public boolean verifyResult() {
         if (isWinningCombination("X") || isWinningCombination("O") || isDraw()) {
             addResults();
-            endOfGame();
+            saveMap();
+           return endOfGame();
         }
+        return true;
     }
 
     public void runAGame(Tile tile) {
-
         if (ifFieldWasUsedBefore(tile)) {
             tile.getText().setText("X");
-            verifyResult();
-            computerMove();
-            verifyResult();
+           boolean nextMove =  verifyResult();
+           if(nextMove) {
+               computerMove();
+               verifyResult();
+           }
         }
     }
 
     public void addResults() {
         if (isWinningCombination("X")) {
-            xWinnings++;
+            putScoreInMap("X");
         } else if (isWinningCombination("O")) {
-            oWinnings++;
+            putScoreInMap("O");
         } else if (isDraw()) {
-            draw++;
+            putScoreInMap("Draw");
         }
     }
 
-    public int getXWinnings() {
-        return xWinnings;
+    private void putScoreInMap(String result) {
+        result = "Round " + numberOfRound + " " + result;
+        if (map.containsKey(result)) {
+            Integer score = map.get(result);
+            score++;
+            map.put(result, score);
+        } else {
+            map.put(result, 1);
+        }
+        System.out.println("saved " + map);
     }
 
-    public int getOWinnings() {
-        return oWinnings;
+    public void saveMap() {
+        try {
+            ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(savedList));
+            oos.writeObject(map);
+            oos.close();
+
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
+        }
     }
 
-    public int getDraw() {
-        return draw;
+    public void loadMap() {
+
+        try {
+            ObjectInputStream ois = new ObjectInputStream(new FileInputStream(savedList));
+            Object readList = ois.readObject();
+            map = (Map<String, Integer>) readList;
+            ois.close();
+            System.out.println(map);
+
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
+        }
     }
 
+    public String showRanking() {
+        String result;
+        String gameResult= "";
+            for (Map.Entry<String, Integer> entry : map.entrySet()) {
+                if(!entry.getKey().equals("round")){
+                    result = entry.getKey() + " = " + entry.getValue();
+                    gameResult = gameResult + result + "\n";
+                }
+        }
+        return gameResult;
+    }
 
-    public void endOfGame() {
+    public void clearTheBoard(){
+        List<Tile> allTiles = grid.getChildren().stream()
+                .map(node -> ((Tile) node))
+                .collect(Collectors.toList());
+
+        for (Tile tile : allTiles) {
+            tile.getText().setText("");
+        }
+    }
+
+    public boolean endOfGame() {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle("Game over");
         String message = "";
@@ -186,30 +235,27 @@ class TicTacToeController {
 
         ButtonType buttonYes = new ButtonType("Yes");
         ButtonType buttonNo = new ButtonType("No");
-        ButtonType buttonShowResult = new ButtonType("Show Result");
+        ButtonType buttonRanking = new ButtonType("Show Ranking");
 
         alert.getButtonTypes().removeAll(ButtonType.OK, ButtonType.CANCEL);
-        alert.getButtonTypes().addAll(buttonYes, buttonNo, buttonShowResult);
+        alert.getButtonTypes().addAll(buttonYes, buttonNo, buttonRanking);
         Optional<ButtonType> response = alert.showAndWait();
 
         if (response.isPresent() && response.get() == (buttonYes)) {
-            List<Tile> allTiles = grid.getChildren().stream()
-                    .map(node -> ((Tile) node))
-                    .collect(Collectors.toList());
+          clearTheBoard();
+          return false;
 
-            for (Tile tile : allTiles) {
-                tile.getText().setText("");
-            }
 
         } else if (response.isPresent() && response.get() == (buttonNo)) {
             Platform.exit();
 
-        } else if (response.isPresent() && response.get() == (buttonShowResult)) {
-            Alert information = new Alert(Alert.AlertType.INFORMATION);
-            information.setTitle("Game result");
-            information.setHeaderText("Winnings X = " + getXWinnings() + "\nWinnings O = " + getOWinnings() + "\nDraw = " + getDraw());
-            Optional<ButtonType> response1 = information.showAndWait();
-            Platform.exit();
+        } else if (response.isPresent() && response.get() == (buttonRanking)) {
+            Alert rankingInformation = new Alert(Alert.AlertType.INFORMATION);
+            rankingInformation.setTitle("Ranking");
+            loadMap();
+            rankingInformation.setHeaderText(showRanking());
+            rankingInformation.showAndWait();
         }
+        return true;
     }
 }
