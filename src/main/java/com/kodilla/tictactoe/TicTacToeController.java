@@ -12,7 +12,7 @@ import java.util.stream.Collectors;
 public class TicTacToeController implements Serializable {
 
     GridPane grid;
-    File savedList = new File("ranking.list");
+    File savedMap = new File("ranking.list");
     Map<String, Integer> map = new LinkedHashMap<>();
     Integer numberOfRound = 0;
 
@@ -30,7 +30,6 @@ public class TicTacToeController implements Serializable {
                 .map(node -> ((Tile) node))
                 .filter(tile -> tile.getText().getText().equals(""))
                 .collect(Collectors.toList());
-
         return emptyTiles;
     }
 
@@ -134,7 +133,7 @@ public class TicTacToeController implements Serializable {
         if (isWinningCombination("X") || isWinningCombination("O") || isDraw()) {
             addResults();
             saveMap();
-           return endOfGame();
+            return endOfGame();
         }
         return true;
     }
@@ -142,11 +141,11 @@ public class TicTacToeController implements Serializable {
     public void runAGame(Tile tile) {
         if (ifFieldWasUsedBefore(tile)) {
             tile.getText().setText("X");
-           boolean nextMove =  verifyResult();
-           if(nextMove) {
-               computerMove();
-               verifyResult();
-           }
+            boolean nextMove = verifyResult();
+            if (nextMove) {
+                computerMove();
+                verifyResult();
+            }
         }
     }
 
@@ -174,7 +173,7 @@ public class TicTacToeController implements Serializable {
 
     public void saveMap() {
         try {
-            ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(savedList));
+            ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(savedMap));
             oos.writeObject(map);
             oos.close();
 
@@ -184,9 +183,8 @@ public class TicTacToeController implements Serializable {
     }
 
     public void loadMap() {
-
         try {
-            ObjectInputStream ois = new ObjectInputStream(new FileInputStream(savedList));
+            ObjectInputStream ois = new ObjectInputStream(new FileInputStream(savedMap));
             Object readList = ois.readObject();
             map = (Map<String, Integer>) readList;
             ois.close();
@@ -199,17 +197,17 @@ public class TicTacToeController implements Serializable {
 
     public String showRanking() {
         String result;
-        String gameResult= "";
-            for (Map.Entry<String, Integer> entry : map.entrySet()) {
-                if(!entry.getKey().equals("round")){
-                    result = entry.getKey() + " = " + entry.getValue();
-                    gameResult = gameResult + result + "\n";
-                }
+        String gameResult = "";
+        for (Map.Entry<String, Integer> entry : map.entrySet()) {
+            if (!entry.getKey().equals("round")) {
+                result = entry.getKey() + " = " + entry.getValue();
+                gameResult = gameResult + result + "\n";
+            }
         }
         return gameResult;
     }
 
-    public void clearTheBoard(){
+    public void clearTheBoard() {
         List<Tile> allTiles = grid.getChildren().stream()
                 .map(node -> ((Tile) node))
                 .collect(Collectors.toList());
@@ -242,9 +240,8 @@ public class TicTacToeController implements Serializable {
         Optional<ButtonType> response = alert.showAndWait();
 
         if (response.isPresent() && response.get() == (buttonYes)) {
-          clearTheBoard();
-          return false;
-
+            clearTheBoard();
+            return false;
 
         } else if (response.isPresent() && response.get() == (buttonNo)) {
             Platform.exit();

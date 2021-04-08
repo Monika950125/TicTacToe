@@ -17,10 +17,9 @@ class Tile extends StackPane {
         setAlignment(Pos.CENTER);
         getChildren().addAll(border, text);
         text.setFont(Font.font(150));
-
     }
 
-    public Text getText(){
+    public Text getText() {
         return text;
     }
 }
